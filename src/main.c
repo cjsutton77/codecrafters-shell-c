@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
         // Display shell prompt
         printf("$ ");
         
-        char* builtins[] = {"exit","echo","type"};
+        char* builtins[] = {"exit","type","echo"};
 
         // Read user input (maximum 99 characters plus null terminator)
         char input[100];
@@ -30,6 +30,20 @@ int main(int argc, char *argv[]) {
         if (strcmp(input, "exit 0") == 0) {
             break;  // Exit the loop if user types "exit 0"
         }
+        else if (strstr(input, "type")){
+            char* cmd = strtok(input, " ");       // Extract the command ("echo")
+            char* message = strtok(NULL, "\0");   // Extract everything after the first space
+            bool flag = true;
+            for (int i = 0; i < sizeof(builtins)/sizeof(char*); i++){
+                if (!strcmp(message,builtins[i])){
+                    flag = false;
+                    printf("%s is a shell builtin\n",builtins[i]);
+                    break;
+                }
+                else continue;
+            }
+            if (flag) printf("%s: not found\n",message);
+        }
         // Handle echo command - prints the text after "echo"
         else if (strstr(input, "echo")) {
             // Split the input into command and message parts
@@ -38,19 +52,6 @@ int main(int argc, char *argv[]) {
             
             // Print the message part
             printf("%s\n", message);
-        }
-        else if (strstr(input, "type")){
-            char* cmd = strtok(input, " ");       // Extract the command ("echo")
-            char* message = strtok(NULL, "\0");   // Extract everything after the first space
-            bool flag = true;
-            for (int i = 0; i < sizeof(builtins)/sizeof(char*); i++){
-                if (!strcmp(message,builtins[i])){
-                    flag = false;
-                    printf("%s is a shell builtin\n",message);
-                }
-                else continue;
-            }
-            if (flag) printf("%s: not found\n",message);
         }
         // Handle unrecognized commands
         else {
