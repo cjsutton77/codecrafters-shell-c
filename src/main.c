@@ -1,6 +1,7 @@
 #include <stdio.h>   // Standard input/output library
 #include <stdlib.h>  // Standard library for general functions
 #include <string.h>  // String manipulation functions
+#include <stdbool.h>
 
 /**
  * A simple shell program that accepts and processes basic commands
@@ -41,12 +42,15 @@ int main(int argc, char *argv[]) {
         else if (strstr(input, "type")){
             char* cmd = strtok(input, " ");       // Extract the command ("echo")
             char* message = strtok(NULL, "\0");   // Extract everything after the first space
+            bool flag = true;
             for (int i = 0; i < sizeof(builtins)/sizeof(char*); i++){
-                if (!strcmp(cmd,builtins[i])){
-                    printf("%s is a shell builtin",cmd);
+                if (!strcmp(message,builtins[i])){
+                    flag = false;
+                    printf("%s is a shell builtin\n",message);
                 }
+                else continue;
             }
-            printf("%s: not found\n",message);
+            if (flag) printf("%s: not found\n",message);
         }
         // Handle unrecognized commands
         else {
