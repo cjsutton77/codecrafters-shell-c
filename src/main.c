@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
             char* cmd = strtok(input, " ");       // Extract the command ("echo")
             char* message = strtok(NULL, "\0");   // Extract everything after the first space
             for (int i = 0; i < sizeof(builtins)/sizeof(char*); i++){
-                if (!strcmp(message,builtins[i])){
-                    printf("%s is a shell builtin",message);
+                if (!strcmp(cmd,builtins[i])){
+                    printf("%s is a shell builtin",cmd);
                 }
             }
             printf("%s: not found\n",message);
