@@ -16,6 +16,8 @@ int main(int argc, char *argv[]) {
         // Display shell prompt
         printf("$ ");
         
+        char* builtins[] = {"exit","echo","type"};
+
         // Read user input (maximum 99 characters plus null terminator)
         char input[100];
         fgets(input, 100, stdin);
@@ -35,6 +37,16 @@ int main(int argc, char *argv[]) {
             
             // Print the message part
             printf("%s\n", message);
+        }
+        else if (strstr(input, "type")){
+            char* cmd = strtok(input, " ");       // Extract the command ("echo")
+            char* message = strtok(NULL, "\0");   // Extract everything after the first space
+            for (int i = 0; i < sizeof(builtins)/sizeof(char*); i++){
+                if (!strcmp(message,builtins[i])){
+                    printf("%s is a shell builtin",message);
+                }
+            }
+            printf("%s: not found\n",message);
         }
         // Handle unrecognized commands
         else {
