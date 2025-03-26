@@ -16,7 +16,8 @@ int main(int argc, char *argv[]) {
         
         // Display shell prompt
         printf("$ ");
-        
+        const char* path = getenv("PATH");
+        //printf("PATH: %s\n",path);
         char* builtins[] = {"exit","type","echo"};
 
         // Read user input (maximum 99 characters plus null terminator)
