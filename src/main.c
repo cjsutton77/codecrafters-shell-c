@@ -10,8 +10,7 @@
  * @return Exit status code
  */
 int main(int argc, char *argv[]) {
-  while (true) {
-    //printf("%s\n",path);
+  while (true) {\
     // Disable output buffering to ensure prompt appears immediately
     setbuf(stdout, NULL);
     // Display shell prompt
@@ -27,17 +26,25 @@ int main(int argc, char *argv[]) {
       break; // Exit the loop if user types "exit 0"
     } 
     else if (strstr(input, "type")) {
-      char *cmd = strtok(input, " "); // Extract the command ("echo")
-      char *message = strtok(NULL, "\0"); // Extract everything after the first space
+      // Extract the command ("echo")
+      char *cmd = strtok(input, " "); 
+      // Extract everything after the first space
+      char *message = strtok(NULL, "\0"); 
+      // this is the flag to kick out depending on what if the command is found or not.
       bool flag = false;
+      // roll through the builtins and check if it matchs (see line 18)
       for (int i = 0; i < sizeof(builtins) / sizeof(char *); i++) {
+        // if the message matches one of the builtins strcmp will return 0
         if (!strcmp(message, builtins[i])) {
+          // flag is true, so print the message but not the fail message
           flag = true;
           printf("%s is a shell builtin\n", builtins[i]);
           break;
         } 
         else continue;
       }
+      // if the flag is true, then bypass the rest of the code otherwise go on and 
+      // search for the file in the PATH
       if (flag) continue;
       struct dirent *de; // Pointer for directory entry 
       // opendir() returns a pointer of DIR type. 
@@ -45,7 +52,9 @@ int main(int argc, char *argv[]) {
       char* path = getenv("PATH");
       if (path != NULL) {
         char path_copy[1024]; // Create a copy buffer (ensure it's large enough)
-        strncpy(path_copy, path, sizeof(path_copy) - 1);
+        // Copy the PATH value because
+        // path is permanently modified by strtok
+        strncpy(path_copy, path, sizeof(path_copy) - 1); 
         path_copy[sizeof(path_copy) - 1] = '\0'; // Null-terminate the string
 
         char* tok = strtok(path_copy, ":");
