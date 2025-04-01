@@ -10,9 +10,10 @@
  * @return Exit status code
  */
 int main(int argc, char *argv[]) {
-  while (true) {\
+  while (true) {
     // Disable output buffering to ensure prompt appears immediately
     setbuf(stdout, NULL);
+    bool commandFlag = true;
     // Display shell prompt
     printf("$ ");
     char *builtins[] = {"exit", "type", "echo"};
@@ -44,7 +45,7 @@ int main(int argc, char *argv[]) {
         else continue;
       }
       // if the flag is true, then bypass the rest of the code otherwise go on and 
-      // search for the file in the PATH
+      // search for the file in the 
       if (flag) continue;
       struct dirent *de; // Pointer for directory entry 
       // opendir() returns a pointer of DIR type. 
@@ -85,10 +86,68 @@ int main(int argc, char *argv[]) {
       // Print the message part
       printf("%s\n", message);
     }
-    // Handle unrecognized commands
-    else {
-      printf("%s: command not found\n", input);
+    else if (commandFlag) {
+      char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
+      // Copy the PATH value because
+      // path is permanently modified by strtok
+      strncpy(input_copy, input, sizeof(input_copy) - 1); 
+      // Extract the command ("echo")
+
+      char *cmd = strtok(input, " "); 
+      // Extract everything after the first space
+      char *message = strtok(NULL, "\0"); 
+      // this is the flag to kick out depending on what if the command is found or not.
+      bool flag = false;
+      // roll through the builtins and check if it matchs (see line 18)
+      // for (int i = 0; i < sizeof(builtins) / sizeof(char *); i++) {
+      //   // if the message matches one of the builtins strcmp will return 0
+      //   if (!strcmp(message, builtins[i])) {
+      //     // flag is true, so print the message but not the fail message
+      //     flag = true;
+      //     printf("%s is a shell builtin\n", builtins[i]);
+      //     break;
+      //   } 
+      //   else continue;
+      // }
+      // if the flag is true, then bypass the rest of the code otherwise go on and 
+      // search for the file in the 
+      if (flag) continue;
+      struct dirent *de; // Pointer for directory entry 
+      // opendir() returns a pointer of DIR type. 
+      DIR *dr;
+      char* path = getenv("PATH");
+      if (path != NULL) {
+        char path_copy[1024]; // Create a copy buffer (ensure it's large enough)
+        // Copy the PATH value because
+        // path is permanently modified by strtok
+        strncpy(path_copy, path, sizeof(path_copy) - 1); 
+        path_copy[sizeof(path_copy) - 1] = '\0'; // Null-terminate the string
+
+        char* tok = strtok(path_copy, ":");
+        while (tok != NULL) {
+          dr = opendir(tok); 
+          if (dr != NULL) {
+            while ((de = readdir(dr)) != NULL) {
+              if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
+              else if (!strcmp(cmd, de->d_name)) {
+                flag = true;
+                system(input_copy);
+                //printf("%s is %s/%s\n", de->d_name, tok, de->d_name);
+                break;
+              }
+            }
+            closedir(dr);
+            if (flag) break;
+          }
+          tok = strtok(NULL, ":");
+        }
+      }
+      if (!flag) printf("%s: command not found\n", input);//printf("%s: not found\n", message);
     }
+    // // Handle unrecognized commands
+    // else {
+    //   printf("%s: command not found\n", input);
+    // }
   }
   return 0; // Return success status code
 }
