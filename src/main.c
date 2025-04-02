@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     bool commandFlag = true;
     // Display shell prompt
     printf("$ ");
-    char *builtins[] = {"exit", "type", "echo"};
+    char *builtins[] = {"exit", "type", "echo","pwd"};
     // Read user input (maximum 99 characters plus null terminator)
     char input[100];
     fgets(input, 100, stdin);
@@ -85,6 +85,14 @@ int main(int argc, char *argv[]) {
       char *message = strtok(NULL, "\0"); // Extract everything after the first space
       // Print the message part
       printf("%s\n", message);
+    }
+    else if (strstr(input, "pwd")) {
+      // Split the input into command and message parts
+      char *cmd = strtok(input, "\0"); // Extract the command ("echo")
+      //char *message = strtok(NULL, "\0"); // Extract everything after the first space
+      // Print the message part
+      system("pwd");
+      //printf("%s\n", cmd);
     }
     else if (commandFlag) {
       char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
