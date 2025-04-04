@@ -3,6 +3,7 @@
 #include <stdlib.h> // Standard library for general functions
 #include <string.h> // String manipulation functions
 #include <dirent.h> // Directory entry for access
+#include <unistd.h> // Standard C library for Unix functions
 /**
  * A simple shell program that accepts and processes basic commands
  * @param argc Number of command line arguments
@@ -16,7 +17,7 @@ int main(int argc, char *argv[]) {
     bool commandFlag = true;
     // Display shell prompt
     printf("$ ");
-    char *builtins[] = {"exit", "type", "echo","pwd"};
+    char *builtins[] = {"cd","exit","type", "echo","pwd"};
     // Read user input (maximum 99 characters plus null terminator)
     char input[100];
     fgets(input, 100, stdin);
@@ -78,6 +79,30 @@ int main(int argc, char *argv[]) {
       }
       if (!flag) printf("%s: not found\n", message);
     }
+    else if (strstr(input, "pwd")) {
+      // Split the input into command and message parts
+      char *cmd = strtok(input, "\0"); // Extract the command ("echo")
+      //char *message = strtok(NULL, "\0"); // Extract everything after the first space
+      // Print the message part
+      char *pwd = getenv("PWD");
+      printf("%s\n", pwd);
+      //system("pwd");
+      //printf("%s\n", cmd);
+    }
+    else if (strstr(input, "cd")) {
+      char *cmd = strtok(input, " "); 
+      // Extract everything after the first space
+      char *message = strtok(NULL, "\0"); 
+      //printf("--> %s\t",message);
+      int retval = chdir(message);
+      //printf("%d\n",retval);
+      if (retval != 0){
+        printf("cd: %s: No such file or directory\n",message);
+      }
+      else {
+        ;;//continue;
+      }
+    }
     // Handle echo command - prints the text after "echo"
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
@@ -85,14 +110,6 @@ int main(int argc, char *argv[]) {
       char *message = strtok(NULL, "\0"); // Extract everything after the first space
       // Print the message part
       printf("%s\n", message);
-    }
-    else if (strstr(input, "pwd")) {
-      // Split the input into command and message parts
-      char *cmd = strtok(input, "\0"); // Extract the command ("echo")
-      //char *message = strtok(NULL, "\0"); // Extract everything after the first space
-      // Print the message part
-      system("pwd");
-      //printf("%s\n", cmd);
     }
     else if (commandFlag) {
       char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
