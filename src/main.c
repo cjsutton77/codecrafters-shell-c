@@ -89,7 +89,8 @@ int main(int argc, char *argv[]) {
       //system("pwd");
       //printf("%s\n", cmd);
     }
-    else if (strstr(input, "cd")) {
+    //else if (strstr(input, "cd")) {
+    else if (strncmp(input, "cd ", 3) == 0 || strcmp(input, "cd") == 0) {
       char *cmd = strtok(input, " "); 
       // Extract everything after the first space
       char *message = strtok(NULL, "\0"); 
@@ -100,7 +101,7 @@ int main(int argc, char *argv[]) {
         printf("cd: %s: No such file or directory\n",message);
       }
       else {
-        ;;//continue;
+        setenv("PWD", message, 1);
       }
     }
     // Handle echo command - prints the text after "echo"
