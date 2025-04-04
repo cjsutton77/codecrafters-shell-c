@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     // Check if user wants to exit the shell
     if (strcmp(input, "exit 0") == 0) {
       break; // Exit the loop if user types "exit 0"
-    } 
+    } // exit block
     else if (strstr(input, "type")) {
       // Extract the command ("echo")
       char *cmd = strtok(input, " "); 
@@ -78,32 +78,29 @@ int main(int argc, char *argv[]) {
         }
       }
       if (!flag) printf("%s: not found\n", message);
-    }
+    } // exit type block
     else if (strstr(input, "pwd")) {
       // Split the input into command and message parts
       char *cmd = strtok(input, "\0"); // Extract the command ("echo")
-      //char *message = strtok(NULL, "\0"); // Extract everything after the first space
       // Print the message part
       char *pwd = getenv("PWD");
       printf("%s\n", pwd);
-      //system("pwd");
-      //printf("%s\n", cmd);
-    }
+    } // exit pwd block
     //else if (strstr(input, "cd")) {
     else if (strncmp(input, "cd ", 3) == 0 || strcmp(input, "cd") == 0) {
       char *cmd = strtok(input, " "); 
       // Extract everything after the first space
       char *message = strtok(NULL, "\0"); 
-      //printf("--> %s\t",message);
       int retval = chdir(message);
-      //printf("%d\n",retval);
       if (retval != 0){
         printf("cd: %s: No such file or directory\n",message);
       }
       else {
+        // once we have changed the directory and it was successful, then 
+        // update $PWD environment variable
         setenv("PWD", message, 1);
       }
-    }
+    } // exit cd block
     // Handle echo command - prints the text after "echo"
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
@@ -111,7 +108,7 @@ int main(int argc, char *argv[]) {
       char *message = strtok(NULL, "\0"); // Extract everything after the first space
       // Print the message part
       printf("%s\n", message);
-    }
+    } // exit echo block
     else if (commandFlag) {
       char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
       // Copy the PATH value because
@@ -170,10 +167,7 @@ int main(int argc, char *argv[]) {
       }
       if (!flag) printf("%s: command not found\n", input);//printf("%s: not found\n", message);
     }
-    // // Handle unrecognized commands
-    // else {
-    //   printf("%s: command not found\n", input);
-    // }
+
   }
   return 0; // Return success status code
 }
