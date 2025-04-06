@@ -110,14 +110,22 @@ int main(int argc, char *argv[]) {
     } // exit pwd block
     else if (strncmp(input, "cd ", 3) == 0 || strcmp(input, "cd") == 0) {
       char cwd[1024];
+      char* home = getenv("HOME");
       char *pwd = getenv("PWD");
       char *cmd = strtok(input, " "); 
       // Extract everything after the first space
       char *message = strtok(NULL, "\0"); 
+      if (!strcmp(message,"~")){
+        //printf("%s\n",home);
+        chdir(home);
+        setenv("PWD", home, 1);
+        continue;
+        //printf("%s\n",home);
+      }
       //char pwd_copy[1024];
       char message_copy[1024];
       char message_copy_dd[1024];
-      char newdir[1024];
+      
       //strncpy(pwd_copy, pwd, sizeof(pwd)); 
       strncpy(message_copy, message, sizeof(message_copy)); 
       strncpy(message_copy_dd,message,sizeof(message_copy_dd));
