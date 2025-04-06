@@ -163,7 +163,9 @@ int main(int argc, char *argv[]) {
           int retval = chdir("..");
           getcwd(cwd, sizeof(cwd));
           //printf(":: %s\n",cwd);
-          strncpy(pwd, cwd, sizeof(pwd));
+          //strncpy(pwd, cwd, sizeof(pwd));
+          strncpy(pwd, cwd, sizeof(cwd) - 1);
+          pwd[sizeof(cwd) - 1] = '\0'; // Ensure null termination
           //printf(":: %s\t%s\n",cwd,pwd);
           if (retval != 0){
             printf("cd: %s: No such file or directory\n",message);
