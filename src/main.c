@@ -10,6 +10,20 @@
  * @param argv Array of command line arguments
  * @return Exit status code
  */
+
+// int countTokens(char* str, char* tok){
+//   int count = 0;
+//   if (!str) return 0;
+//   tok = strtok(str,tok);
+//   if (tok) {
+//     while (tok){
+//       tok = strtok(NULL,tok);
+//       ++count;
+//     }
+//   }
+// return count;
+// }
+
 int main(int argc, char *argv[]) {
   while (true) {
     // Disable output buffering to ensure prompt appears immediately
@@ -32,6 +46,9 @@ int main(int argc, char *argv[]) {
       char *cmd = strtok(input, " "); 
       // Extract everything after the first space
       char *message = strtok(NULL, "\0"); 
+      if (message == NULL) {
+        continue;
+      }
       // this is the flag to kick out depending on what if the command is found or not.
       bool flag = false;
       // roll through the builtins and check if it matchs (see line 18)
@@ -82,26 +99,93 @@ int main(int argc, char *argv[]) {
     else if (strstr(input, "pwd")) {
       // Split the input into command and message parts
       char *cmd = strtok(input, "\0"); // Extract the command ("echo")
+      int len = strlen(cmd);
       // Print the message part
       char *pwd = getenv("PWD");
+      if (!strcmp(&pwd[len - 1],"/")){
+        pwd[len - 1] = '\0';
+        len = len - 1;
+      }
       printf("%s\n", pwd);
     } // exit pwd block
-    //else if (strstr(input, "cd")) {
     else if (strncmp(input, "cd ", 3) == 0 || strcmp(input, "cd") == 0) {
+      char cwd[1024];
+      char *pwd = getenv("PWD");
       char *cmd = strtok(input, " "); 
       // Extract everything after the first space
       char *message = strtok(NULL, "\0"); 
-      int retval = chdir(message);
-      if (retval != 0){
-        printf("cd: %s: No such file or directory\n",message);
+      //char pwd_copy[1024];
+      char message_copy[1024];
+      char message_copy_dd[1024];
+      char newdir[1024];
+      //strncpy(pwd_copy, pwd, sizeof(pwd)); 
+      strncpy(message_copy, message, sizeof(message_copy)); 
+      strncpy(message_copy_dd,message,sizeof(message_copy_dd));
+      //int tokCount = countTokens(message_copy_dd,"/");
+      char* tok = strtok(message_copy, "/");
+      bool cdFlag = true;
+      while (tok){
+        if (!strcmp(".",tok)) {
+          cdFlag = false;
+          //printf("single dot\t%s\n",tok);
+          tok = strtok(NULL, "\0");
+          int len = strlen(tok);
+          if (!strcmp(&tok[len - 1],"/")){
+            tok[len - 1] = '\0';
+            len = len - 1;
+          }
+          if (!strcmp(&tok[strlen(tok) - 1],"/")){
+            //strcat(pwd,"/");
+            ;;
+          } 
+          else {
+            strcat(pwd,"/");
+            //;;
+          }
+          strcat(pwd,tok);
+          int retval = chdir(tok);
+          if (retval != 0){
+            printf("cd: %s: No such file or directory\n",pwd);
+          }
+          if (!cdFlag & !retval) setenv("PWD", pwd, 1);
+        }
+        else if (!strcmp("..",tok)) {
+          cdFlag = false;
+          //printf("%d:\tdouble dot\t%s\n",tokCount,tok);
+          int retval = chdir("..");
+          getcwd(cwd, sizeof(cwd));
+          //printf(":: %s\n",cwd);
+          strncpy(pwd, cwd, sizeof(pwd));
+          //printf(":: %s\t%s\n",cwd,pwd);
+          if (retval != 0){
+            printf("cd: %s: No such file or directory\n",message);
+          }
+          //if (!cdFlag & !retval) setenv("PWD", pwd, 1);
+          //printf("tok: %s %s\n",tok,pwd);
+          tok = strtok(NULL, "/");
+        }
+        else{
+          //printf(" -%s-\n",tok);
+          tok = strtok(NULL, "/");
+        }
       }
-      else {
-        // once we have changed the directory and it was successful, then 
-        // update $PWD environment variable
-        setenv("PWD", message, 1);
+      if (cdFlag){
+        int retval = chdir(message);
+        if (retval != 0){
+          printf("cd: %s: No such file or directory\n",message);
+        }
+        else {
+          // once we have changed the directory and it was successful, then 
+          // update $PWD environment variable
+          int len = strlen(message);
+          if (!strcmp(&message[len - 1],"/")){
+            message[len - 1] = '\0';
+            len = len - 1;
+          }
+          setenv("PWD", message, 1);
+        }
       }
     } // exit cd block
-    // Handle echo command - prints the text after "echo"
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
       char *cmd = strtok(input, " "); // Extract the command ("echo")
@@ -165,9 +249,8 @@ int main(int argc, char *argv[]) {
           tok = strtok(NULL, ":");
         }
       }
-      if (!flag) printf("%s: command not found\n", input);//printf("%s: not found\n", message);
+      if (!flag) printf("%s: command not found\n", input);
     }
-
   }
   return 0; // Return success status code
 }
