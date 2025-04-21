@@ -203,6 +203,15 @@ int main(int argc, char *argv[]) {
       }
       printf("\n");
     }
+    else if (strstr(input, "echo \"")){
+      char *cmd = strtok(input, "\"");
+      char *message = strtok(NULL, "\"");
+      while (message != NULL) {
+        printf("%s",message);
+        message = strtok(NULL, " \"");
+      }
+      printf("\n");
+    }
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
       char *cmd = strtok(input, " "); // Extract the command ("echo")
