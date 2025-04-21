@@ -115,12 +115,10 @@ int main(int argc, char *argv[]) {
       char *cmd = strtok(input, " "); 
       // Extract everything after the first space
       char *message = strtok(NULL, "\0"); 
-      if (!strcmp(message,"~")){
-        //printf("%s\n",home);
+      if (message == NULL || strcmp(message, "~") == 0) {
         chdir(home);
         setenv("PWD", home, 1);
         continue;
-        //printf("%s\n",home);
       }
       //char pwd_copy[1024];
       char message_copy[1024];
@@ -196,12 +194,26 @@ int main(int argc, char *argv[]) {
         }
       }
     } // exit cd block
+    else if (strstr(input, "echo '")){
+      char *cmd = strtok(input, "\'");
+      char *message = strtok(NULL, "\'");
+      while (message != NULL) {
+        printf("%s",message);
+        message = strtok(NULL, "\'");
+      }
+      printf("\n");
+    }
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
       char *cmd = strtok(input, " "); // Extract the command ("echo")
-      char *message = strtok(NULL, "\0"); // Extract everything after the first space
-      // Print the message part
-      printf("%s\n", message);
+      char *message = strtok(NULL, " "); // Extract everything after the first space
+      while (message != NULL) {
+        printf("%s ",message);
+        //
+        message = strtok(NULL, " ");
+      }
+      printf("\n");
+      // printf("%s\n",message);
     } // exit echo block
     else if (commandFlag) {
       char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
