@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
       char *message = strtok(NULL, "\"");
       while (message != NULL) {
         printf("%s",message);
-        message = strtok(NULL, " \"");
+        message = strtok(NULL, "\"");
       }
       printf("\n");
     }
