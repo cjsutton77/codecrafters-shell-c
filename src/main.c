@@ -4,25 +4,8 @@
 #include <string.h> // String manipulation functions
 #include <dirent.h> // Directory entry for access
 #include <unistd.h> // Standard C library for Unix functions
-/**
- * A simple shell program that accepts and processes basic commands
- * @param argc Number of command line arguments
- * @param argv Array of command line arguments
- * @return Exit status code
- */
 
-// int countTokens(char* str, char* tok){
-//   int count = 0;
-//   if (!str) return 0;
-//   tok = strtok(str,tok);
-//   if (tok) {
-//     while (tok){
-//       tok = strtok(NULL,tok);
-//       ++count;
-//     }
-//   }
-// return count;
-// }
+void quotes(char*, int, bool);
 
 int main(int argc, char *argv[]) {
   while (true) {
@@ -193,24 +176,19 @@ int main(int argc, char *argv[]) {
           setenv("PWD", message, 1);
         }
       }
-    } // exit cd block
-    else if (strstr(input, "echo '")){
-      char *cmd = strtok(input, "\'");
-      char *message = strtok(NULL, "\'");
-      while (message != NULL) {
-        printf("%s",message);
-        message = strtok(NULL, "\'");
-      }
-      printf("\n");
+    } 
+    // exit cd block
+    else if (strstr(input, "echo \'")){
+      char* message = input + 5; // newMessage
+      // printf("%s\n",input);
+      // char* message = strtok(input, "echo");
+      quotes(message,strlen(message),true);
     }
     else if (strstr(input, "echo \"")){
-      char *cmd = strtok(input, "\"");
-      char *message = strtok(NULL, "\"");
-      while (message != NULL) {
-        printf("%s",message);
-        message = strtok(NULL, "\"");
-      }
-      printf("\n");
+      char* message = input + 5; // newMessage
+      //printf("%s\n",input);
+      //char* message = strtok(input, "echo");
+      quotes(message,strlen(message),false);
     }
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
@@ -285,3 +263,47 @@ int main(int argc, char *argv[]) {
   }
   return 0; // Return success status code
 }
+
+void quotes(char* wordsFrom, int length, bool single) {
+  int counter = 0;
+  bool inside=false;
+  char prev = '\0';
+  char next = '\0';
+  char wordsTo[1024] = {};
+  if (single){
+    for (int i = 0; i < length; i++){
+      if (wordsFrom[i] == '\''){
+        continue;
+      }
+      else {
+        wordsTo[counter++] = wordsFrom[i];
+      }
+    }
+    printf("%s\n",wordsTo);
+  }
+  else {
+    for (int i = 0; i < length; i++){
+      if (i > 0) {
+        prev = wordsFrom[i-1];
+        next = wordsFrom[i];
+      }
+      if (wordsFrom[i] == '\"'){
+        inside = !inside;
+        continue;
+      }
+      else {
+        if (inside)
+        {
+          wordsTo[counter++] = wordsFrom[i];
+        }
+        else if ((prev == ' ') && (next == ' ')){
+          wordsTo[counter++] = ' ';
+          //continue;
+        }
+        
+      }
+    }
+    printf("%s\n",wordsTo);
+  }
+}
+
