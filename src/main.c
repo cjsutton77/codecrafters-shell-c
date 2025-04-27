@@ -6,6 +6,7 @@
 #include <unistd.h> // Standard C library for Unix functions
 
 void quotes(char*, int, bool);
+void backslash(char*, char*, int);
 
 int main(int argc, char *argv[]) {
   while (true) {
@@ -190,6 +191,13 @@ int main(int argc, char *argv[]) {
       //char* message = strtok(input, "echo");
       quotes(message,strlen(message),false);
     }
+    else if (strstr(input, "echo ") && strstr(input,"\\")) {
+      char* message = input + 5; // newMessage
+      char newMessage[1024];
+      backslash(message,newMessage,strlen(message));
+      //printf("%s\n",newMessage);
+      //printf("%s\n",newMessage);
+    }
     else if (strstr(input, "echo")) {
       // Split the input into command and message parts
       char *cmd = strtok(input, " "); // Extract the command ("echo")
@@ -200,8 +208,20 @@ int main(int argc, char *argv[]) {
         message = strtok(NULL, " ");
       }
       printf("\n");
-      // printf("%s\n",message);
-    } // exit echo block
+    }
+      
+    // else if (strstr(input, "echo")) {
+    //   // Split the input into command and message parts
+    //   char *cmd = strtok(input, " "); // Extract the command ("echo")
+    //   char *message = strtok(NULL, " "); // Extract everything after the first space
+    //   while (message != NULL) {
+    //     printf("%s ",message);
+    //     //
+    //     message = strtok(NULL, " ");
+    //   }
+    //   printf("\n");
+    //   // printf("%s\n",message);
+    // } // exit echo block
     else if (commandFlag) {
       char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
       // Copy the PATH value because
@@ -307,3 +327,44 @@ void quotes(char* wordsFrom, int length, bool single) {
   }
 }
 
+void backslash(char* oldMessage, char* newMessage, int length){
+  char prev = oldMessage[0];
+  char next = oldMessage[1];
+  int counter = 0;
+  int start = 1;
+  if (prev == '\\' && next == '\''){
+    newMessage[counter++] = '\'';
+    ++start;
+  }
+  else if (prev == '\\' && next == '\"'){
+    newMessage[counter++] = '\"';
+    ++start;
+  }
+  else {
+    newMessage[counter++] = oldMessage[0];
+  }
+  for (int i = start; i < length+1; i++){
+    //printf(".");
+    prev = oldMessage[i-1];
+    next = oldMessage[i];
+    if (next == '\\'){
+      continue;
+    }
+    // else if (prev == ' ' && next == ' '){
+    //   newMessage[counter++] = ' ';
+    // }
+    else if (prev == '\\' && next == ' '){
+      newMessage[counter++] = ' ';
+    }
+    else if (prev == '\\' && next == '\''){
+      newMessage[counter++] = '\'';
+    }
+    else if (prev == '\\' && next == '\"'){
+      newMessage[counter++] = '\"';
+    }
+    else {
+      newMessage[counter++] = oldMessage[i];
+    }
+  }
+  printf("%s\n",newMessage);
+}
