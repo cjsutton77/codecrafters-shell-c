@@ -1,287 +1,165 @@
 #include <stdbool.h>
-#include <stdio.h>  // Standard input/output library
-#include <stdlib.h> // Standard library for general functions
-#include <string.h> // String manipulation functions
-#include <dirent.h> // Directory entry for access
-#include <unistd.h> // Standard C library for Unix functions
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <unistd.h>
 
 void quotes(char*, int, bool);
 void backslash(char*, char*, int);
+void handle_echo(const char *input);
 
 int main(int argc, char *argv[]) {
-  while (true) {
-    // Disable output buffering to ensure prompt appears immediately
-    setbuf(stdout, NULL);
-    bool commandFlag = true;
-    // Display shell prompt
-    printf("$ ");
-    char *builtins[] = {"cd","exit","type", "echo","pwd"};
-    // Read user input (maximum 99 characters plus null terminator)
-    char input[100];
-    fgets(input, 100, stdin);
-    // Remove trailing newline character from input
-    input[strcspn(input, "\n")] = 0;
-    // Check if user wants to exit the shell
-    if (strcmp(input, "exit 0") == 0) {
-      break; // Exit the loop if user types "exit 0"
-    } // exit block
-    else if (strstr(input, "type")) {
-      // Extract the command ("echo")
-      char *cmd = strtok(input, " "); 
-      // Extract everything after the first space
-      char *message = strtok(NULL, "\0"); 
-      if (message == NULL) {
-        continue;
-      }
-      // this is the flag to kick out depending on what if the command is found or not.
-      bool flag = false;
-      // roll through the builtins and check if it matchs (see line 18)
-      for (int i = 0; i < sizeof(builtins) / sizeof(char *); i++) {
-        // if the message matches one of the builtins strcmp will return 0
-        if (!strcmp(message, builtins[i])) {
-          // flag is true, so print the message but not the fail message
-          flag = true;
-          printf("%s is a shell builtin\n", builtins[i]);
-          break;
-        } 
-        else continue;
-      }
-      // if the flag is true, then bypass the rest of the code otherwise go on and 
-      // search for the file in the 
-      if (flag) continue;
-      struct dirent *de; // Pointer for directory entry 
-      // opendir() returns a pointer of DIR type. 
-      DIR *dr;
-      char* path = getenv("PATH");
-      if (path != NULL) {
-        char path_copy[1024]; // Create a copy buffer (ensure it's large enough)
-        // Copy the PATH value because
-        // path is permanently modified by strtok
-        strncpy(path_copy, path, sizeof(path_copy) - 1); 
-        path_copy[sizeof(path_copy) - 1] = '\0'; // Null-terminate the string
+    while (true) {
+        setbuf(stdout, NULL);
+        printf("$ ");
+        char input[100];
+        if (!fgets(input, sizeof(input), stdin)) break;
+        input[strcspn(input, "\n")] = 0;
 
-        char* tok = strtok(path_copy, ":");
-        while (tok != NULL) {
-          dr = opendir(tok); 
-          if (dr != NULL) {
-            while ((de = readdir(dr)) != NULL) {
-              if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
-              else if (!strcmp(message, de->d_name)) {
-                flag = true;
-                printf("%s is %s/%s\n", de->d_name, tok, de->d_name);
-                break;
-              }
+        if (strcmp(input, "exit 0") == 0) break;
+
+        if (strncmp(input, "type ", 5) == 0) {
+            char *message = input + 5;
+            char *builtins[] = {"cd", "exit", "type", "echo", "pwd"};
+            bool flag = false;
+            for (int i = 0; i < sizeof(builtins) / sizeof(char *); i++) {
+                if (strcmp(message, builtins[i]) == 0) {
+                    printf("%s is a shell builtin\n", builtins[i]);
+                    flag = true;
+                    break;
+                }
             }
-            closedir(dr);
-            if (flag) break;
-          }
-          tok = strtok(NULL, ":");
+            if (!flag) {
+                // Search PATH for external command
+                struct dirent *de;
+                DIR *dr;
+                char *path = getenv("PATH");
+                if (path) {
+                    char path_copy[1024];
+                    strncpy(path_copy, path, sizeof(path_copy) - 1);
+                    path_copy[sizeof(path_copy) - 1] = '\0';
+                    char *tok = strtok(path_copy, ":");
+                    while (tok) {
+                        dr = opendir(tok);
+                        if (dr) {
+                            while ((de = readdir(dr)) != NULL) {
+                                if (strcmp(de->d_name, message) == 0) {
+                                    printf("%s is %s/%s\n", de->d_name, tok, de->d_name);
+                                    flag = true;
+                                    break;
+                                }
+                            }
+                            closedir(dr);
+                            if (flag) break;
+                        }
+                        tok = strtok(NULL, ":");
+                    }
+                }
+            }
+            if (!flag) printf("%s: not found\n", message);
         }
-      }
-      if (!flag) printf("%s: not found\n", message);
-    } // exit type block
-    else if (strstr(input, "pwd")) {
-      // Split the input into command and message parts
-      char *cmd = strtok(input, "\0"); // Extract the command ("echo")
-      int len = strlen(cmd);
-      // Print the message part
-      char *pwd = getenv("PWD");
-      if (!strcmp(&pwd[len - 1],"/")){
-        pwd[len - 1] = '\0';
-        len = len - 1;
-      }
-      printf("%s\n", pwd);
-    } // exit pwd block
-    else if (strncmp(input, "cd ", 3) == 0 || strcmp(input, "cd") == 0) {
-      char cwd[1024];
-      char* home = getenv("HOME");
-      char *pwd = getenv("PWD");
-      char *cmd = strtok(input, " "); 
-      // Extract everything after the first space
-      char *message = strtok(NULL, "\0"); 
-      if (message == NULL || strcmp(message, "~") == 0) {
-        chdir(home);
-        setenv("PWD", home, 1);
-        continue;
-      }
-      //char pwd_copy[1024];
-      char message_copy[1024];
-      char message_copy_dd[1024];
-      
-      //strncpy(pwd_copy, pwd, sizeof(pwd)); 
-      strncpy(message_copy, message, sizeof(message_copy)); 
-      strncpy(message_copy_dd,message,sizeof(message_copy_dd));
-      //int tokCount = countTokens(message_copy_dd,"/");
-      char* tok = strtok(message_copy, "/");
-      bool cdFlag = true;
-      while (tok){
-        if (!strcmp(".",tok)) {
-          cdFlag = false;
-          //printf("single dot\t%s\n",tok);
-          tok = strtok(NULL, "\0");
-          int len = strlen(tok);
-          if (!strcmp(&tok[len - 1],"/")){
-            tok[len - 1] = '\0';
-            len = len - 1;
-          }
-          if (!strcmp(&tok[strlen(tok) - 1],"/")){
-            //strcat(pwd,"/");
-            ;;
-          } 
-          else {
-            strcat(pwd,"/");
-            //;;
-          }
-          strcat(pwd,tok);
-          int retval = chdir(tok);
-          if (retval != 0){
-            printf("cd: %s: No such file or directory\n",pwd);
-          }
-          if (!cdFlag & !retval) setenv("PWD", pwd, 1);
+        else if (strcmp(input, "pwd") == 0) {
+            char *pwd = getenv("PWD");
+            if (pwd) {
+                int len = strlen(pwd);
+                if (len > 0 && pwd[len - 1] == '/') pwd[len - 1] = '\0';
+                printf("%s\n", pwd);
+            }
         }
-        else if (!strcmp("..",tok)) {
-          cdFlag = false;
-          //printf("%d:\tdouble dot\t%s\n",tokCount,tok);
-          int retval = chdir("..");
-          getcwd(cwd, sizeof(cwd));
-          //printf(":: %s\n",cwd);
-          //strncpy(pwd, cwd, sizeof(pwd));
-          strncpy(pwd, cwd, sizeof(cwd) - 1);
-          pwd[sizeof(cwd) - 1] = '\0'; // Ensure null termination
-          //printf(":: %s\t%s\n",cwd,pwd);
-          if (retval != 0){
-            printf("cd: %s: No such file or directory\n",message);
-          }
-          //if (!cdFlag & !retval) setenv("PWD", pwd, 1);
-          //printf("tok: %s %s\n",tok,pwd);
-          tok = strtok(NULL, "/");
+        else if (strncmp(input, "cd", 2) == 0 && (input[2] == ' ' || input[2] == '\0')) {
+            char *home = getenv("HOME");
+            char *pwd = getenv("PWD");
+            char *message = NULL;
+            if (input[2] == ' ') message = input + 3;
+            if (!message || strcmp(message, "~") == 0 || strlen(message) == 0) {
+                chdir(home);
+                setenv("PWD", home, 1);
+            } else {
+                int retval = chdir(message);
+                if (retval != 0) {
+                    printf("cd: %s: No such file or directory\n", message);
+                } else {
+                    char cwd[1024];
+                    getcwd(cwd, sizeof(cwd));
+                    setenv("PWD", cwd, 1);
+                }
+            }
         }
-        else{
-          //printf(" -%s-\n",tok);
-          tok = strtok(NULL, "/");
-        }
-      }
-      if (cdFlag){
-        int retval = chdir(message);
-        if (retval != 0){
-          printf("cd: %s: No such file or directory\n",message);
+        else if (strncmp(input, "echo", 4) == 0 && (input[4] == ' ' || input[4] == '\0')) {
+            handle_echo(input);
         }
         else {
-          // once we have changed the directory and it was successful, then 
-          // update $PWD environment variable
-          int len = strlen(message);
-          if (!strcmp(&message[len - 1],"/")){
-            message[len - 1] = '\0';
-            len = len - 1;
-          }
-          setenv("PWD", message, 1);
-        }
-      }
-    } 
-    // exit cd block
-    else if (strstr(input, "echo \'")){
-      char* message = input + 5; // newMessage
-      // printf("%s\n",input);
-      // char* message = strtok(input, "echo");
-      quotes(message,strlen(message),true);
-    }
-    else if (strstr(input, "echo \"")){
-      char* message = input + 5; // newMessage
-      //printf("%s\n",input);
-      //char* message = strtok(input, "echo");
-      quotes(message,strlen(message),false);
-    }
-    else if (strstr(input, "echo ") && strstr(input,"\\")) {
-      char* message = input + 5; // newMessage
-      char newMessage[1024];
-      backslash(message,newMessage,strlen(message));
-      //printf("%s\n",newMessage);
-      //printf("%s\n",newMessage);
-    }
-    else if (strstr(input, "echo")) {
-      // Split the input into command and message parts
-      char *cmd = strtok(input, " "); // Extract the command ("echo")
-      char *message = strtok(NULL, " "); // Extract everything after the first space
-      while (message != NULL) {
-        printf("%s ",message);
-        //
-        message = strtok(NULL, " ");
-      }
-      printf("\n");
-    }
-      
-    // else if (strstr(input, "echo")) {
-    //   // Split the input into command and message parts
-    //   char *cmd = strtok(input, " "); // Extract the command ("echo")
-    //   char *message = strtok(NULL, " "); // Extract everything after the first space
-    //   while (message != NULL) {
-    //     printf("%s ",message);
-    //     //
-    //     message = strtok(NULL, " ");
-    //   }
-    //   printf("\n");
-    //   // printf("%s\n",message);
-    // } // exit echo block
-    else if (commandFlag) {
-      char input_copy[1024]; // Create a copy buffer (ensure it's large enough)
-      // Copy the PATH value because
-      // path is permanently modified by strtok
-      strncpy(input_copy, input, sizeof(input_copy) - 1); 
-      // Extract the command ("echo")
-
-      char *cmd = strtok(input, " "); 
-      // Extract everything after the first space
-      char *message = strtok(NULL, "\0"); 
-      // this is the flag to kick out depending on what if the command is found or not.
-      bool flag = false;
-      // roll through the builtins and check if it matchs (see line 18)
-      // for (int i = 0; i < sizeof(builtins) / sizeof(char *); i++) {
-      //   // if the message matches one of the builtins strcmp will return 0
-      //   if (!strcmp(message, builtins[i])) {
-      //     // flag is true, so print the message but not the fail message
-      //     flag = true;
-      //     printf("%s is a shell builtin\n", builtins[i]);
-      //     break;
-      //   } 
-      //   else continue;
-      // }
-      // if the flag is true, then bypass the rest of the code otherwise go on and 
-      // search for the file in the 
-      if (flag) continue;
-      struct dirent *de; // Pointer for directory entry 
-      // opendir() returns a pointer of DIR type. 
-      DIR *dr;
-      char* path = getenv("PATH");
-      if (path != NULL) {
-        char path_copy[1024]; // Create a copy buffer (ensure it's large enough)
-        // Copy the PATH value because
-        // path is permanently modified by strtok
-        strncpy(path_copy, path, sizeof(path_copy) - 1); 
-        path_copy[sizeof(path_copy) - 1] = '\0'; // Null-terminate the string
-
-        char* tok = strtok(path_copy, ":");
-        while (tok != NULL) {
-          dr = opendir(tok); 
-          if (dr != NULL) {
-            while ((de = readdir(dr)) != NULL) {
-              if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) continue;
-              else if (!strcmp(cmd, de->d_name)) {
-                flag = true;
-                system(input_copy);
-                //printf("%s is %s/%s\n", de->d_name, tok, de->d_name);
-                break;
-              }
+            // External command execution
+            char input_copy[1024];
+            strncpy(input_copy, input, sizeof(input_copy) - 1);
+            input_copy[sizeof(input_copy) - 1] = '\0';
+            char *cmd = strtok(input_copy, " ");
+            bool flag = false;
+            char *path = getenv("PATH");
+            if (path) {
+                char path_copy[1024];
+                strncpy(path_copy, path, sizeof(path_copy) - 1);
+                path_copy[sizeof(path_copy) - 1] = '\0';
+                char *tok = strtok(path_copy, ":");
+                while (tok) {
+                    DIR *dr = opendir(tok);
+                    if (dr) {
+                        struct dirent *de;
+                        while ((de = readdir(dr)) != NULL) {
+                            if (strcmp(cmd, de->d_name) == 0) {
+                                flag = true;
+                                system(input);
+                                break;
+                            }
+                        }
+                        closedir(dr);
+                        if (flag) break;
+                    }
+                    tok = strtok(NULL, ":");
+                }
             }
-            closedir(dr);
-            if (flag) break;
-          }
-          tok = strtok(NULL, ":");
+            if (!flag) printf("%s: command not found\n", input);
         }
-      }
-      if (!flag) printf("%s: command not found\n", input);
     }
-  }
-  return 0; // Return success status code
+    return 0;
+}
+
+void handle_echo(const char *input) {
+    system(input);
+    // Skip "echo" and any following spaces
+    // const char *msg = input + 4;
+    // while (*msg == ' ') msg++;
+
+    // if (*msg == '\'') {
+    //     // Single-quoted
+    //     printf("!HI!\n");
+    //     msg++;
+    //     const char *end = strchr(msg, '\'');
+    //     if (end) {
+    //         fwrite(msg, 1, end - msg, stdout);
+    //         putchar('\n');
+    //     } else {
+    //         printf("\n");
+    //     }
+    // } else if (*msg == '"') {
+    //     // Double-quoted
+    //     msg++;
+    //     const char *end = strchr(msg, '"');
+    //     if (end) {
+    //         fwrite(msg, 1, end - msg, stdout);
+    //         putchar('\n');
+    //     } else {
+    //         printf("\n");
+    //     }
+    // } else if (strchr(msg, '\\')) {
+    //     // Backslash handling
+    //     char newMessage[1024];
+    //     backslash((char*)msg, newMessage, strlen(msg));
+    // } else {
+        // Plain echo
+        // printf("%s\n", msg);
+    // }
 }
 
 void quotes(char* wordsFrom, int length, bool single) {
