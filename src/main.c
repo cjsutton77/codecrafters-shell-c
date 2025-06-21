@@ -4,10 +4,12 @@
 #include <string.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 void quotes(char*, int, bool);
 void backslash(char*, char*, int);
 void handle_echo(const char *input);
+bool command_exists(const char *command);
 
 int main(int argc, char *argv[]) {
     while (true) {
@@ -90,76 +92,123 @@ int main(int argc, char *argv[]) {
             handle_echo(input);
         }
         else {
-            // External command execution
-            char input_copy[1024];
-            strncpy(input_copy, input, sizeof(input_copy) - 1);
-            input_copy[sizeof(input_copy) - 1] = '\0';
-            char *cmd = strtok(input_copy, " ");
-            bool flag = false;
-            char *path = getenv("PATH");
-            if (path) {
+            // Check for quoted command name
+            if (input[0] == '\'' || input[0] == '"') {
+                char quote = input[0];
+                // Find the closing quote
+                char *end_quote = strchr(input + 1, quote);
+                if (end_quote) {
+                    size_t cmd_len = end_quote - (input + 1);
+                    char command[1024] = {0};
+                    strncpy(command, input + 1, cmd_len);
+                    command[cmd_len] = '\0';
+
+                    // Skip space(s) after closing quote to get arguments
+                    char *args = end_quote + 1;
+                    while (*args == ' ') args++;
+
+                    // Check if the command exists before executing
+                    if (command_exists(command)) {
+                        // Build the full command line with proper shell escaping
+                        char full_cmd[2048] = {0};
+                        char escaped_cmd[1024] = {0};
+                        
+                        // Escape the command for shell execution
+                        // We'll use single quotes to wrap the entire command, but need to handle
+                        // any single quotes within the command name
+                        int escaped_pos = 0;
+                        escaped_cmd[escaped_pos++] = '\'';
+                        
+                        for (int i = 0; i < cmd_len; i++) {
+                            if (command[i] == '\'') {
+                                // End current single quote, add escaped single quote, start new single quote
+                                escaped_cmd[escaped_pos++] = '\'';
+                                escaped_cmd[escaped_pos++] = '\\';
+                                escaped_cmd[escaped_pos++] = '\'';
+                                escaped_cmd[escaped_pos++] = '\'';
+                            } else {
+                                escaped_cmd[escaped_pos++] = command[i];
+                            }
+                        }
+                        escaped_cmd[escaped_pos++] = '\'';
+                        escaped_cmd[escaped_pos] = '\0';
+
+                        if (*args) {
+                            snprintf(full_cmd, sizeof(full_cmd), "%s %s", escaped_cmd, args);
+                        } else {
+                            snprintf(full_cmd, sizeof(full_cmd), "%s", escaped_cmd);
+                        }
+
+                        int ret = system(full_cmd);
+                        if (ret == -1) {
+                            printf("%s: command execution failed\n", command);
+                        }
+                    } else {
+                        printf("%s: command not found\n", command);
+                    }
+                } else {
+                    printf("Unmatched quote in command\n");
+                }
+            } else {
+              // External command execution as before
+              char input_copy[1024];
+              strncpy(input_copy, input, sizeof(input_copy) - 1);
+              input_copy[sizeof(input_copy) - 1] = '\0';
+              char *cmd = strtok(input_copy, " ");
+              bool flag = false;
+              char *path = getenv("PATH");
+              if (path) {
                 char path_copy[1024];
                 strncpy(path_copy, path, sizeof(path_copy) - 1);
                 path_copy[sizeof(path_copy) - 1] = '\0';
                 char *tok = strtok(path_copy, ":");
                 while (tok) {
-                    DIR *dr = opendir(tok);
-                    if (dr) {
-                        struct dirent *de;
-                        while ((de = readdir(dr)) != NULL) {
-                            if (strcmp(cmd, de->d_name) == 0) {
-                                flag = true;
-                                system(input);
-                                break;
-                            }
-                        }
-                        closedir(dr);
-                        if (flag) break;
+                  DIR *dr = opendir(tok);
+                  if (dr) {
+                    struct dirent *de;
+                    while ((de = readdir(dr)) != NULL) {
+                      if (strcmp(cmd, de->d_name) == 0) {
+                        flag = true;
+                        system(input);
+                        break;
+                      }
                     }
-                    tok = strtok(NULL, ":");
+                    closedir(dr);
+                    if (flag) break;
+                  }
+                  tok = strtok(NULL, ":");
                 }
+              }
+              if (!flag) printf("%s: command not found\n", input);
             }
-            if (!flag) printf("%s: command not found\n", input);
         }
     }
     return 0;
 }
 
+// Helper function to check if a command exists in PATH
+bool command_exists(const char *command) {
+    char *path = getenv("PATH");
+    if (!path) return false;
+    
+    char path_copy[1024];
+    strncpy(path_copy, path, sizeof(path_copy) - 1);
+    path_copy[sizeof(path_copy) - 1] = '\0';
+    
+    char *tok = strtok(path_copy, ":");
+    while (tok) {
+        char full_path[1024];
+        snprintf(full_path, sizeof(full_path), "%s/%s", tok, command);
+        if (access(full_path, X_OK) == 0) {
+            return true;
+        }
+        tok = strtok(NULL, ":");
+    }
+    return false;
+}
+
 void handle_echo(const char *input) {
     system(input);
-    // Skip "echo" and any following spaces
-    // const char *msg = input + 4;
-    // while (*msg == ' ') msg++;
-
-    // if (*msg == '\'') {
-    //     // Single-quoted
-    //     printf("!HI!\n");
-    //     msg++;
-    //     const char *end = strchr(msg, '\'');
-    //     if (end) {
-    //         fwrite(msg, 1, end - msg, stdout);
-    //         putchar('\n');
-    //     } else {
-    //         printf("\n");
-    //     }
-    // } else if (*msg == '"') {
-    //     // Double-quoted
-    //     msg++;
-    //     const char *end = strchr(msg, '"');
-    //     if (end) {
-    //         fwrite(msg, 1, end - msg, stdout);
-    //         putchar('\n');
-    //     } else {
-    //         printf("\n");
-    //     }
-    // } else if (strchr(msg, '\\')) {
-    //     // Backslash handling
-    //     char newMessage[1024];
-    //     backslash((char*)msg, newMessage, strlen(msg));
-    // } else {
-        // Plain echo
-        // printf("%s\n", msg);
-    // }
 }
 
 void quotes(char* wordsFrom, int length, bool single) {
@@ -196,9 +245,7 @@ void quotes(char* wordsFrom, int length, bool single) {
         }
         else if ((prev == ' ') && (next == ' ')){
           wordsTo[counter++] = ' ';
-          //continue;
         }
-        
       }
     }
     printf("%s\n",wordsTo);
@@ -222,15 +269,11 @@ void backslash(char* oldMessage, char* newMessage, int length){
     newMessage[counter++] = oldMessage[0];
   }
   for (int i = start; i < length+1; i++){
-    //printf(".");
     prev = oldMessage[i-1];
     next = oldMessage[i];
     if (next == '\\'){
       continue;
     }
-    // else if (prev == ' ' && next == ' '){
-    //   newMessage[counter++] = ' ';
-    // }
     else if (prev == '\\' && next == ' '){
       newMessage[counter++] = ' ';
     }
